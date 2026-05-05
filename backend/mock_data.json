@@ -1,0 +1,56 @@
+{
+    "filename": "AC20-Institute-Var-2.ifc",
+    "total_elements": 150,
+    "elements": [
+        {
+            "id": "1A2B3C",
+            "type": "IfcWall",
+            "material": "Concrete",
+            "volume_m3": 12.5,
+            "area_m2": 45.0,
+            "width_m": 0.3,
+            "height_m": 3.0,
+            "length_m": 15.0
+        },
+        {
+            "id": "4D5E6F",
+            "type": "IfcWall",
+            "material": "Timber",
+            "volume_m3": 5.2,
+            "area_m2": 20.0,
+            "width_m": 0.2,
+            "height_m": 3.0,
+            "length_m": 6.6
+        },
+        {
+            "id": "7G8H9I",
+            "type": "IfcDoor",
+            "material": "Steel",
+            "volume_m3": 0.5,
+            "area_m2": 2.1,
+            "width_m": 0.85,
+            "height_m": 2.1,
+            "length_m": 0.05
+        },
+        {
+            "id": "10J11K",
+            "type": "IfcDoor",
+            "material": "Timber",
+            "volume_m3": 0.4,
+            "area_m2": 1.8,
+            "width_m": 0.75,
+            "height_m": 2.0,
+            "length_m": 0.04
+        },
+        {
+            "id": "12L13M",
+            "type": "IfcSlab",
+            "material": "Concrete",
+            "volume_m3": 45.0,
+            "area_m2": 150.0,
+            "width_m": 10.0,
+            "height_m": 0.3,
+            "length_m": 15.0
+        }
+    ]
+}
