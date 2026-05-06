@@ -1,65 +1,175 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { UploadCloud, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function Home() {
+  const [file, setFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const droppedFile = e.dataTransfer.files[0];
+      if (droppedFile.name.toLowerCase().endsWith(".ifc")) {
+        setFile(droppedFile);
+        setError("");
+      } else {
+        setError("Only .ifc files are supported.");
+      }
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const selectedFile = e.target.files[0];
+      if (selectedFile.name.toLowerCase().endsWith(".ifc")) {
+        setFile(selectedFile);
+        setError("");
+      } else {
+        setError("Only .ifc files are supported.");
+      }
+    }
+  };
+
+  const startPipeline = async () => {
+    if (!file) return;
+    setLoading(true);
+    setError("");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/analyze", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to analyze file");
+      }
+
+      const data = await response.json();
+      
+      // Store the result in localStorage to pass to the report page
+      localStorage.setItem("agenticbim_report", JSON.stringify(data));
+      
+      // Navigate to the report page
+      router.push("/report");
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred");
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-slate-200 font-sans">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-2xl w-full"
+      >
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-extrabold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent mb-4">
+            AgenticBIM
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-slate-400 text-lg">
+            Upload your Industry Foundation Classes (.ifc) model and let our AI agents automatically extract quantities, estimate costs, and verify building code compliance.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div 
+          className={`relative border-2 border-dashed rounded-3xl p-12 text-center transition-all duration-300 ease-in-out ${
+            isDragging ? "border-blue-500 bg-blue-500/10" : "border-slate-700 hover:border-slate-500 bg-slate-900/50"
+          }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <input 
+            type="file" 
+            accept=".ifc" 
+            className="hidden" 
+            ref={fileInputRef} 
+            onChange={handleFileSelect}
+          />
+          
+          <div className="flex flex-col items-center justify-center space-y-4 cursor-pointer">
+            <div className="p-4 bg-slate-800 rounded-full shadow-lg border border-slate-700">
+              <UploadCloud className="w-12 h-12 text-blue-400" />
+            </div>
+            
+            {file ? (
+              <div className="flex items-center space-x-2 text-emerald-400 font-medium">
+                <CheckCircle2 className="w-6 h-6" />
+                <span className="text-lg">{file.name}</span>
+              </div>
+            ) : (
+              <div>
+                <p className="text-xl font-medium text-slate-200 mb-1">
+                  Drag & Drop your IFC file here
+                </p>
+                <p className="text-slate-500 text-sm">
+                  or click to browse from your computer
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-      </main>
+
+        {error && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            className="mt-6 flex items-center space-x-2 text-red-400 bg-red-400/10 p-4 rounded-xl border border-red-400/20"
+          >
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <p>{error}</p>
+          </motion.div>
+        )}
+
+        <div className="mt-8 flex justify-center">
+          <button
+            onClick={startPipeline}
+            disabled={!file || loading}
+            className={`
+              relative px-8 py-4 rounded-xl font-bold text-lg shadow-lg transition-all duration-300
+              ${!file 
+                ? "bg-slate-800 text-slate-500 cursor-not-allowed" 
+                : "bg-blue-600 hover:bg-blue-500 text-white hover:shadow-blue-500/25"}
+            `}
+          >
+            {loading ? (
+              <div className="flex items-center space-x-3">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span>Agents are analyzing...</span>
+              </div>
+            ) : (
+              "Start AI Pipeline"
+            )}
+          </button>
+        </div>
+      </motion.div>
     </div>
   );
 }

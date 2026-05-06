@@ -15,6 +15,10 @@ AgenticBIM solves the hallucination problem by strictly separating mathematical 
 - **Agentic Pipeline**: Uses CrewAI to orchestrate specialized AI agents that evaluate the deterministic JSON against building codes and pricing matrices, generating highly accurate, hallucination-free reports.
 
 ## ✨ Features
+
+![Upload Interface](./public/screenshot-upload.png)
+*Upload your `.ifc` file via the beautiful drag-and-drop interface.*
+
 - **Zero-Friction UI**: Drag-and-drop Next.js interface for uploading complex 3D structural models.
 
 - **Deterministic Extraction**: Bypasses LLM math limitations by programmatically extracting true geometric properties.
@@ -22,6 +26,9 @@ AgenticBIM solves the hallucination problem by strictly separating mathematical 
 - **Multi-Agent Orchestration**:
   - 👷‍♂️ **The Estimator**: Cross-references deterministic volumes with live material pricing matrices to generate cost breakdowns.
   - 📋 **The Compliance Officer**: Evaluates exact wall thicknesses and door widths against strict safety protocols (e.g., minimum 0.2m thickness for concrete walls) and flags missing required elements (e.g., Fire Exit Doors).
+
+![Analysis Report](./public/screenshot-report.png)
+*The final generated report, securely separating mathematical geometry from AI reasoning.*
 
 ## 🛠️ Tech Stack
 
@@ -83,6 +90,7 @@ Open a new terminal, navigate to the frontend directory:
 ```bash
 cd frontend
 npm install
+npm install lucide-react framer-motion react-markdown @tailwindcss/typography
 ```
 
 Create a `.env.local` file in the `/frontend` directory:
