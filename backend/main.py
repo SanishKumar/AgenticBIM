@@ -1,76 +1,50 @@
-import json
-import tempfile
+"""Local IFC extraction service. No inference calls or model persistence."""
+import logging
 import os
-import shutil
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from pathlib import Path
+import tempfile
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from models import ReportResponse
-from agents.orchestrator import run_analysis_crew
-from services.report_generator import generate_markdown
 from ifc_parser import parse_ifc_file
+from models import ModelSnapshot
 
-app = FastAPI(title="AgenticBIM API", description="Automated IFC Analysis Pipeline")
+app = FastAPI(title="Trace · AgenticBIM", version="1.0.0")
+app.add_middleware(CORSMiddleware,
+    allow_origins=os.getenv("FRONTEND_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(","),
+    allow_credentials=False, allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
+MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], # Allow frontend to access
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+@app.get("/api/health")
+def health():
+    return {"status": "ok", "engine": "IfcOpenShell", "version": "1.0"}
 
-@app.get("/")
-def read_root():
-    return {"status": "ok", "message": "AgenticBIM Backend is running"}
-
-@app.post("/api/analyze", response_model=ReportResponse)
-async def analyze_ifc(file: UploadFile = File(...)):
-    """
-    Phase 3 endpoint: 
-    Saves the uploaded IFC file to a temp directory, parses it deterministically 
-    using IfcOpenShell, and feeds the extracted JSON into the CrewAI agents.
-    """
-    if not file.filename.lower().endswith(".ifc"):
-        raise HTTPException(status_code=400, detail="Only .ifc files are supported")
-
-    # 1. Save uploaded file to a temporary location
+@app.post("/api/analyze", response_model=ModelSnapshot)
+def analyze_ifc(file: UploadFile = File(...)):
+    """Sync endpoint runs in FastAPI's worker pool, not the event loop."""
+    if not file.filename or not file.filename.lower().endswith(".ifc"):
+        raise HTTPException(400, "Choose an .ifc file.")
+    safe_name = file.filename.replace("\\", "/").split("/")[-1]
+    path = None
     try:
-        fd, temp_path = tempfile.mkstemp(suffix=".ifc")
-        with os.fdopen(fd, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-            
-        # 2. Parse the IFC file deterministically
-        try:
-            extracted_data = parse_ifc_file(temp_path)
-            # Override filename so it shows the original upload name
-            extracted_data["filename"] = file.filename
-        except ImportError:
-            raise HTTPException(status_code=500, detail="ifcopenshell is not installed. Please run: pip install ifcopenshell")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to parse IFC file: {str(e)}")
-            
+        with tempfile.NamedTemporaryFile(suffix=".ifc", delete=False) as target:
+            path = Path(target.name)
+            total = 0
+            while chunk := file.file.read(1024 * 1024):
+                total += len(chunk)
+                if total > MAX_UPLOAD_BYTES:
+                    raise HTTPException(413, "File exceeds the 25 MB local-review limit.")
+                target.write(chunk)
+        if total == 0:
+            raise HTTPException(422, "The file is empty.")
+        return parse_ifc_file(str(path), safe_name)
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except Exception as exc:
+        logging.exception("IFC extraction failed")
+        raise HTTPException(422, "Could not read this IFC. Check that it is a valid IFC STEP export with declared project units.") from exc
     finally:
-        # Clean up the temporary file
-        if 'temp_path' in locals() and os.path.exists(temp_path):
-            os.remove(temp_path)
-            
-    # Fallback to mock data if the file yielded 0 elements (just for testing resilience)
-    if extracted_data.get("total_elements", 0) == 0:
-        print("Warning: No structural elements found in the IFC. Falling back to mock data for demonstration.")
-        with open("mock_data.json", "r") as f:
-            extracted_data = json.load(f)
-
-    # 3. Run the CrewAI Agentic Reasoning Pipeline
-    # Groq's strict 6,000 TPM limit on this tier will fail if we send all 32 elements.
-    # To bypass this, we send a truncated sample (first 5 elements) to the LLM to prove the logic.
-    crew_payload = extracted_data.copy()
-    crew_payload["elements"] = extracted_data.get("elements", [])[:5]
-    ai_analysis = run_analysis_crew(crew_payload)
-
-    # 4. Generate the Markdown Report
-    final_report = generate_markdown(extracted_data, ai_analysis)
-
-    return ReportResponse(
-        markdown_report=final_report,
-        deterministic_data=extracted_data
-    )
+        file.file.close()
+        if path:
+            path.unlink(missing_ok=True)

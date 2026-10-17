@@ -1,21 +1,40 @@
-from pydantic import BaseModel
-from typing import List, Optional
+"""Versioned boundary between IFC extraction and the review application."""
+from typing import Literal
+from pydantic import BaseModel, Field
 
-class ElementData(BaseModel):
+class QuantityEvidence(BaseModel):
+    value: float
+    unit: Literal["m", "m²", "m³"]
+    source: str
+    raw_value: float
+    raw_unit: str
+    factor: float
+    basis: Literal["net", "gross", "declared"]
+
+class Mesh(BaseModel):
+    vertices: list[float]
+    faces: list[int]
+
+class Element(BaseModel):
     id: str
-    type: str # e.g., "IfcWall", "IfcDoor", "IfcSlab"
-    material: str
-    volume_m3: Optional[float] = 0.0
-    area_m2: Optional[float] = 0.0
-    width_m: Optional[float] = 0.0
-    height_m: Optional[float] = 0.0
-    length_m: Optional[float] = 0.0
+    express_id: int
+    name: str
+    type: str
+    storey: str
+    elevation: float = 0
+    materials: list[str] = Field(default_factory=list)
+    quantities: dict[str, QuantityEvidence | None]
+    mesh: Mesh | None = None
+    geometry_hash: str | None = None
+    warnings: list[str] = Field(default_factory=list)
 
-class IFCDataExtraction(BaseModel):
+class ModelSnapshot(BaseModel):
+    version: Literal["1.0"] = "1.0"
     filename: str
-    elements: List[ElementData]
-    total_elements: int
-
-class ReportResponse(BaseModel):
-    markdown_report: str
-    deterministic_data: dict
+    project_name: str
+    schema_name: str
+    model_hash: str
+    source: Literal["ifc", "demo"] = "ifc"
+    units: dict[str, str]
+    elements: list[Element]
+    warnings: list[str] = Field(default_factory=list)

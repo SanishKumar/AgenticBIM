@@ -1,99 +1,154 @@
-import json
-import logging
-from typing import Dict, Any
+"""IFC declarations remain distinct from geometry; missing quantities stay unknown."""
+import hashlib
+import math
+from pathlib import Path
+import ifcopenshell
+import ifcopenshell.geom
+import ifcopenshell.util.element as element_util
+import ifcopenshell.util.unit as unit_util
+from models import Element, Mesh, ModelSnapshot, QuantityEvidence
+from tessellation import read_tessellation, geometry_fingerprint
 
-try:
-    import ifcopenshell
-    import ifcopenshell.util.element as element_util
-except ImportError:
-    logging.warning("ifcopenshell is not installed. Please run: pip install ifcopenshell")
-    ifcopenshell = None
+MAX_ELEMENTS = 5000
+MAX_TRIANGLES = 750_000
+QUANTITIES = {
+    "volume": ("VOLUMEUNIT", "m³", ("NetVolume", "GrossVolume")),
+    "area": ("AREAUNIT", "m²", ("NetArea", "NetSideArea", "NetFloorArea", "GrossArea", "GrossSideArea", "GrossFloorArea")),
+    "width": ("LENGTHUNIT", "m", ("Width",)),
+    "height": ("LENGTHUNIT", "m", ("Height", "Depth")),
+    "length": ("LENGTHUNIT", "m", ("Length",)),
+}
 
-def parse_ifc_file(file_path: str) -> Dict[str, Any]:
-    """
-    Parses an IFC file and extracts structural elements (Walls, Slabs, Doors)
-    along with their base quantities (Volume, Area, Dimensions) and materials.
-    """
-    if not ifcopenshell:
-        raise ImportError("ifcopenshell is required to parse IFC files.")
+def unit_factor(unit, kind, depth=0):
+    """Honor conversion factors, including custom units with nonstandard names."""
+    if depth > 8 or not unit or unit.UnitType != kind:
+        raise ValueError("Invalid or recursive unit definition")
+    power, expected = {"LENGTHUNIT": (1, "METRE"), "AREAUNIT": (2, "SQUARE_METRE"), "VOLUMEUNIT": (3, "CUBIC_METRE")}[kind]
+    if unit.is_a("IfcSIUnit") and unit.Name == expected:
+        return unit_util.get_prefix_multiplier(unit.Prefix) ** power
+    if unit.is_a("IfcConversionBasedUnit") and not unit.is_a("IfcConversionBasedUnitWithOffset"):
+        conversion = unit.ConversionFactor
+        value = float(conversion.ValueComponent.wrappedValue)
+        if not math.isfinite(value) or value <= 0:
+            raise ValueError("Invalid conversion factor")
+        return value * unit_factor(conversion.UnitComponent, kind, depth + 1)
+    raise ValueError("Unsupported unit definition")
 
-    ifc_file = ifcopenshell.open(file_path)
-    
-    # We want to extract walls, slabs, and doors just like our mock_data.json
-    element_types = ["IfcWall", "IfcWallStandardCase", "IfcSlab", "IfcDoor"]
-    
-    extracted_elements = []
-    
-    for ifc_type in element_types:
-        elements = ifc_file.by_type(ifc_type)
-        
-        for el in elements:
-            # 1. Base Element Info
-            el_data = {
-                "id": el.GlobalId,
-                "type": "IfcWall" if "Wall" in el.is_a() else el.is_a(),
-                "name": el.Name or "Unnamed",
-                "material": "Unknown",
-                "volume_m3": 0.0,
-                "area_m2": 0.0,
-                "width_m": 0.0,
-                "height_m": 0.0,
-                "length_m": 0.0
-            }
-            
-            # 2. Extract Material using ifcopenshell's utility function
-            material = element_util.get_material(el)
-            if material:
-                if material.is_a("IfcMaterial"):
-                    el_data["material"] = material.Name
-                elif material.is_a("IfcMaterialLayerSetUsage"):
-                    layers = material.ForLayerSet.MaterialLayers
-                    if layers:
-                        el_data["material"] = layers[0].Material.Name
-                elif material.is_a("IfcMaterialList"):
-                    if material.Materials:
-                        el_data["material"] = material.Materials[0].Name
-            
-            # 3. Extract Base Quantities
-            # `get_psets` grabs all Property Sets and Quantity Sets as a flat dict of dicts
-            psets = element_util.get_psets(el)
-            
-            # Look for standard BaseQuantities OR specific Qto_ property sets (like Qto_SlabBaseQuantities)
-            q = psets.get("BaseQuantities", {})
-            if not q:
-                # Fallback: scan for any Quantity Takeoff (Qto) set
-                for key, value in psets.items():
-                    if key.startswith("Qto_"):
-                        q = value
-                        break
-                        
-            if q:
-                # Round volumes and areas to 3 decimal places
-                el_data["volume_m3"] = round(float(q.get("NetVolume", q.get("GrossVolume", 0.0))), 3)
-                el_data["area_m2"] = round(float(q.get("NetArea", q.get("GrossArea", q.get("NetSideArea", 0.0)))), 3)
-                
-                # Convert linear dimensions from mm to meters AND round them to 3 decimal places
-                el_data["width_m"] = round(float(q.get("Width", 0.0)) / 1000.0, 3)
-                el_data["height_m"] = round(float(q.get("Height", q.get("Depth", 0.0))) / 1000.0, 3)
-                el_data["length_m"] = round(float(q.get("Length", 0.0)) / 1000.0, 3)
-            
-            extracted_elements.append(el_data)
-            
-    result = {
-        "filename": file_path.split("/")[-1].split("\\")[-1],
-        "total_elements": len(extracted_elements),
-        "elements": extracted_elements
-    }
-    
-    return result
+def extract_quantities(model, element):
+    """Occurrence QTO only: type quantities are not instance measurements."""
+    declared = []
+    for relation in getattr(element, "IsDefinedBy", ()):
+        if not relation.is_a("IfcRelDefinesByProperties"):
+            continue
+        definition = relation.RelatingPropertyDefinition
+        if definition.is_a("IfcElementQuantity"):
+            declared.extend((definition.Name, q) for q in (definition.Quantities or ()))
+    result, warnings = {}, []
+    for key, (kind, symbol, aliases) in QUANTITIES.items():
+        result[key] = None
+        for alias in aliases:
+            matches = [(pset, q) for pset, q in declared if q.Name == alias]
+            if not matches:
+                continue
+            if len(matches) > 1:
+                warnings.append(f"Ambiguous {alias}: multiple occurrence quantities; excluded from takeoff.")
+                break
+            pset, quantity = matches[0]
+            expected_class = {"VOLUMEUNIT": "IfcQuantityVolume", "AREAUNIT": "IfcQuantityArea", "LENGTHUNIT": "IfcQuantityLength"}[kind]
+            if not quantity.is_a(expected_class):
+                warnings.append(f"{alias} has an incompatible quantity type; excluded.")
+                break
+            unit = quantity.Unit or unit_util.get_project_unit(model, kind)
+            if not unit or unit.UnitType != kind:
+                warnings.append(f"No valid {kind} for {alias}; quantity excluded.")
+                break
+            raw = float(quantity[3])
+            try:
+                factor = unit_factor(unit, kind)
+                value = raw * factor
+                if not math.isfinite(value) or value <= 0:
+                    raise ValueError("non-positive or non-finite quantity")
+            except (ValueError, TypeError, AttributeError, ZeroDivisionError):
+                warnings.append(f"Invalid {alias}; quantity excluded.")
+                break
+            result[key] = QuantityEvidence(value=value, unit=symbol, raw_value=raw,
+                raw_unit=unit_util.get_unit_symbol(unit), factor=factor,
+                source=f"#{quantity.id()} / {pset}.{alias}",
+                basis="net" if alias.startswith("Net") else "gross" if alias.startswith("Gross") else "declared")
+            break
+    if element.is_a("IfcDoor") or element.is_a("IfcWindow"):
+        for key, attribute in (("width", "OverallWidth"), ("height", "OverallHeight")):
+            raw = getattr(element, attribute, None)
+            unit = unit_util.get_project_unit(model, "LENGTHUNIT")
+            if result[key] is None and raw and unit:
+                try:
+                    factor = unit_factor(unit, "LENGTHUNIT")
+                except ValueError:
+                    warnings.append(f"Invalid unit for {attribute}; dimension excluded.")
+                    continue
+                value = float(raw) * factor
+                if math.isfinite(value) and value > 0:
+                    result[key] = QuantityEvidence(value=value, unit="m", raw_value=raw,
+                        raw_unit=unit_util.get_unit_symbol(unit), factor=factor,
+                        source=f"#{element.id()} / {element.is_a()}.{attribute}", basis="declared")
+    return result, warnings
 
-if __name__ == "__main__":
-    # To test this standalone, you will need to provide a sample .ifc file.
-    import sys
-    if len(sys.argv) > 1:
-        test_file = sys.argv[1]
-        print(f"Parsing {test_file}...")
-        parsed_data = parse_ifc_file(test_file)
-        print(json.dumps(parsed_data, indent=2))
-    else:
-        print("Usage: python ifc_parser.py <path_to_ifc_file>")
+def parse_ifc_file(file_path: str, filename: str | None = None) -> ModelSnapshot:
+    path = Path(file_path)
+    model = ifcopenshell.open(str(path))
+    # A single query includes subclasses without double-counting IfcWallStandardCase.
+    entities = sorted(model.by_type("IfcElement"), key=lambda el: el.id())
+    entities = [el for el in entities if not el.is_a("IfcFeatureElement")]
+    if not entities:
+        raise ValueError("This IFC contains no physical elements. No sample data has been substituted.")
+    if len(entities) > MAX_ELEMENTS:
+        raise ValueError(f"This review supports up to {MAX_ELEMENTS:,} elements. Export a smaller discipline model.")
+    ids = [el.GlobalId for el in entities]
+    if len(ids) != len(set(ids)) or any(not value for value in ids):
+        raise ValueError("Missing or duplicate IFC GlobalIds prevent reliable element identity and revision matching.")
+    settings = ifcopenshell.geom.settings()
+    settings.set("use-world-coords", True)
+    elements, warnings, triangles = [], [], 0
+    if not unit_util.get_project_unit(model, "LENGTHUNIT"):
+        raise ValueError("The IFC has no project length unit. Geometry cannot be interpreted reliably.")
+    length_scale = unit_factor(unit_util.get_project_unit(model, "LENGTHUNIT"), "LENGTHUNIT")
+    for entity in entities:
+        quantities, element_warnings = extract_quantities(model, entity)
+        materials = sorted({m.Name for m in element_util.get_materials(entity) if m.Name})
+        container = element_util.get_container(entity)
+        elevation = float(getattr(container, "Elevation", None) or 0) * length_scale
+        mesh, geometry_hash = None, None
+        if entity.Representation:
+            try:
+                tessellation = read_tessellation(entity, length_scale)
+                if tessellation:
+                    vertices, faces = tessellation.vertices, tessellation.faces
+                else:
+                    shape = ifcopenshell.geom.create_shape(settings, entity)
+                    vertices, faces = list(shape.geometry.verts), list(shape.geometry.faces)
+                geometry_hash = geometry_fingerprint(vertices, faces)
+                if triangles + len(faces) // 3 <= MAX_TRIANGLES:
+                    mesh = Mesh(vertices=vertices, faces=faces)
+                    triangles += len(faces) // 3
+                else:
+                    element_warnings.append("Preview triangle budget reached. Quantities remain included.")
+            except (RuntimeError, ValueError):
+                element_warnings.append("Geometry could not be rendered. Declared quantities remain included.")
+        else:
+            element_warnings.append("No geometric representation in the source IFC.")
+        elements.append(Element(id=entity.GlobalId, express_id=entity.id(),
+            name=entity.Name or f"{entity.is_a()} #{entity.id()}", type=entity.is_a(),
+            storey=(container.Name or "Unnamed level") if container else "Unassigned",
+            elevation=elevation, materials=materials, quantities=quantities,
+            mesh=mesh, geometry_hash=geometry_hash, warnings=element_warnings))
+    if any(e.mesh is None for e in elements):
+        warnings.append(f"{sum(e.mesh is None for e in elements)} elements have no preview geometry; all remain in the review.")
+    projects = model.by_type("IfcProject")
+    units = {}
+    for kind in ("LENGTHUNIT", "AREAUNIT", "VOLUMEUNIT"):
+        unit = unit_util.get_project_unit(model, kind)
+        units[kind] = unit_util.get_unit_symbol(unit) if unit else "not declared"
+    return ModelSnapshot(filename=filename or path.name,
+        project_name=projects[0].Name if projects and projects[0].Name else path.stem,
+        schema_name=model.schema, model_hash=hashlib.sha256(path.read_bytes()).hexdigest(),
+        units=units, elements=elements, warnings=warnings)

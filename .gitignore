@@ -11,6 +11,8 @@ downloads/
 eggs/
 .eggs/
 lib/
+!frontend/lib/
+!frontend/lib/**
 lib64/
 parts/
 sdist/
@@ -73,3 +75,6 @@ logs/
 .cache/
 .temp/
 temp/
+
+.venv312/
+*.tsbuildinfo
