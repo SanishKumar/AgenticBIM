@@ -26,7 +26,9 @@ python scripts/smoke.py http://127.0.0.1:3000
 docker compose ps
 ```
 
-The smoke check loads the page, checks API health, imports the included IFC padded with whitespace to exceed 11 MB, verifies all 135 source meshes and the intentionally unknown volume, and checks that a 28 MB request envelope is rejected. It does not modify a browser's stored review. GitHub Actions builds the images and runs this check on Ubuntu.
+The smoke check loads the page, checks API health, imports the included IFC padded with whitespace to exceed 11 MB, verifies all 135 source meshes and the intentionally unknown volume, and checks that a 28 MB request envelope is rejected. It does not modify a browser's stored review. GitHub Actions builds the images and runs this check on Ubuntu, then separately sends the same large import through Next's rewrite using `scripts/proxy-smoke.mjs`.
+
+The Next.js development/standalone proxy is explicitly configured for a 26 MiB body and a 160-second upstream timeout. Its default 10 MiB buffer would otherwise truncate a supported upload. The container gateway forwards imports directly to the API and enforces its own envelope limit.
 
 ## Import budgets
 

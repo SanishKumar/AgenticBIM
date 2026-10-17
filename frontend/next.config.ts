@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: process.env.TRACE_STANDALONE === "1" ? "standalone" : undefined,
   poweredByHeader: false,
+  experimental: {
+    proxyClientMaxBodySize: "26mb",
+    proxyTimeout: 160_000,
+  },
   async rewrites() {
     return [
       {
