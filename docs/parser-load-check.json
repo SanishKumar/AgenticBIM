@@ -1,0 +1,43 @@
+{
+  "scope": "Synthetic rectangular columns with shared source representation and unique placements/QTO. Includes worker startup, parsing, serialization and parent validation. Excludes fixture generation and browser rendering.",
+  "environment": {
+    "system": "Windows",
+    "release": "11",
+    "python": "3.12.14",
+    "ifcopenshell": "0.9.0"
+  },
+  "limits": {
+    "wall_seconds": 60,
+    "cpu_seconds_linux": 45,
+    "address_space_mb_linux": 2048
+  },
+  "repeats": 3,
+  "results": [
+    {
+      "elements": 1000,
+      "meshes": 1000,
+      "triangles": 12000,
+      "input_bytes": 421149,
+      "result_bytes": 707093,
+      "seconds": [
+        1.337,
+        1.333,
+        1.32
+      ],
+      "median_seconds": 1.333
+    },
+    {
+      "elements": 5000,
+      "meshes": 5000,
+      "triangles": 60000,
+      "input_bytes": 2167266,
+      "result_bytes": 3571041,
+      "seconds": [
+        4.821,
+        4.827,
+        4.776
+      ],
+      "median_seconds": 4.821
+    }
+  ]
+}

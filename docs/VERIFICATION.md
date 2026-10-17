@@ -2,12 +2,16 @@
 
 ## Import and packaging follow-up
 
+- [Linux CI run 39031138966](https://github.com/SanishKumar/AgenticBIM/actions/runs/39031138966) passed all three jobs: frontend, backend and containers. This includes **13 frontend and 34 backend tests**, lint, build, production dependency audit and both container import smoke checks. Windows ran 32 backend tests with the two Linux-native checks explicitly skipped.
+
 - Added real-process regressions for timeout, client disconnect, task cancellation and an abruptly exiting worker; each stop path is supervised by the API process.
 - Added ASGI checks for chunked and falsely declared body sizes, invalid envelopes, rejected origins, slow uploads, non-queued concurrent imports and slot release after an application failure.
 - Added Linux-only integration checks for a cylindrical extrusion, a mapped cylinder and a wall with an opening. These run through the isolated worker and compare mesh volumes with hand-calculated expectations; missing declared quantities must remain unknown.
 - The container workflow builds the frontend, API and gateway, waits for health checks, imports a valid IFC over 11 MB through the published endpoint, verifies its 135 meshes and unknown volume, and rejects an oversized request envelope.
 - Docker is not installed on the development host. Container and native-kernel results are established by the linked remote workflow, not by a claimed local Docker run.
 - Local frontend lint and production build passed after the packaging configuration change. The unpatched development-only braces advisory remains; the standalone runtime does not ship the lint toolchain. Production dependency auditing is now a CI check.
+- A live 11,697,387-byte upload through the local Next.js rewrite returned all 135 meshes and the expected undeclared volume after aligning the proxy buffer and timeout with the API limits.
+- The [synthetic parser load check](LOAD_CHECK.md) retained all 5,000 elements and 60,000 triangles with a 4.821-second median over three Windows runs. This measures the parser workflow, not browser rendering or customer-model performance.
 
 See [deployment details](DEPLOYMENT.md) for concrete budgets and platform differences. The following sections retain the earlier product and browser verification record.
 
@@ -69,4 +73,4 @@ Windows application control blocked the installed IfcOpenShell native geometry m
 
 The local API test client required normal local-network permissions outside the restricted shell sandbox. Turbopack workers also failed in this Windows environment; the supported webpack mode completed successfully. The browser preview runs on `127.0.0.1:3000` with the local API on port `8001`; the ignored local environment file reflects that port. Repository defaults remain port `8000`.
 
-No real customer IFC, large-model performance benchmark, accessibility audit, independent measurement audit, jurisdiction-specific code validation, or multi-user deployment was performed. Default rates and the model are explicitly illustrative.
+No real customer IFC benchmark, large-model browser performance measurement, accessibility audit, independent measurement audit, jurisdiction-specific code validation, or multi-user deployment was performed. The synthetic parser check above is deliberately narrower. Default rates and the model are explicitly illustrative.

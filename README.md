@@ -146,6 +146,8 @@ On macOS/Linux, use `../.venv/bin/python` for the backend check. The suite curre
 
 The production build uses webpack for consistent Windows behavior. To serve it locally, run `npm run build` followed by `npm start` in `frontend`.
 
+A reproducible [synthetic load check](docs/LOAD_CHECK.md) exercises the parser at 1,000 and 5,000 elements. It records counts, source/result sizes and elapsed times without implying performance on arbitrary customer models.
+
 Regenerate the two synthetic IFC files and parsed snapshots from the repository root:
 
 ```powershell
