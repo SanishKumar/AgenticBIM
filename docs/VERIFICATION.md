@@ -1,5 +1,16 @@
 # Verification · 17 October 2026
 
+## Import and packaging follow-up
+
+- Added real-process regressions for timeout, client disconnect, task cancellation and an abruptly exiting worker; each stop path is supervised by the API process.
+- Added ASGI checks for chunked and falsely declared body sizes, invalid envelopes, rejected origins, slow uploads, non-queued concurrent imports and slot release after an application failure.
+- Added Linux-only integration checks for a cylindrical extrusion, a mapped cylinder and a wall with an opening. These run through the isolated worker and compare mesh volumes with hand-calculated expectations; missing declared quantities must remain unknown.
+- The container workflow builds the frontend, API and gateway, waits for health checks, imports a valid IFC over 11 MB through the published endpoint, verifies its 135 meshes and unknown volume, and rejects an oversized request envelope.
+- Docker is not installed on the development host. Container and native-kernel results are established by the linked remote workflow, not by a claimed local Docker run.
+- Local frontend lint and production build passed after the packaging configuration change. The unpatched development-only braces advisory remains; the standalone runtime does not ship the lint toolchain. Production dependency auditing is now a CI check.
+
+See [deployment details](DEPLOYMENT.md) for concrete budgets and platform differences. The following sections retain the earlier product and browser verification record.
+
 ## Automated checks
 
 - Frontend: **13 tests passed** (`npm test`). Covers complete-model evaluation, explicit exclusion, exact material mapping, composite/unit rejection, threshold tolerance, identity-based revision comparison, unknown deltas, shared-rate repricing, monetary range limits, CSV formula neutralization, unverified geometry, quantity basis/unit changes, tiny quantities and financially meaningful sub-tolerance changes. Rendering tests preserve centimetre details at large survey coordinates and preserve relative displacement between revision meshes.

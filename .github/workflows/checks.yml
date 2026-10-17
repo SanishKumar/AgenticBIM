@@ -17,6 +17,7 @@ jobs:
       - run: npm test
       - run: npm run lint
       - run: npm run build
+      - run: npm audit --omit=dev --audit-level=high
   backend:
     runs-on: ubuntu-latest
     defaults:
@@ -31,3 +32,18 @@ jobs:
           cache-dependency-path: backend/requirements*.txt
       - run: pip install -r requirements-dev.txt
       - run: python -m pytest -q
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start the complete stack
+        run: docker compose up --build -d --wait --wait-timeout 180
+      - name: Verify the published entry point
+        run: python scripts/smoke.py
+      - name: Container diagnostics
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Stop the stack
+        if: always()
+        run: docker compose down

@@ -1,0 +1,65 @@
+name: trace
+services:
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 3g
+    cpus: 2
+    environment:
+      FRONTEND_ORIGINS: "http://localhost:${TRACE_PORT:-3000},http://127.0.0.1:${TRACE_PORT:-3000}"
+      TRACE_IMPORT_CONCURRENCY: 1
+      TRACE_UPLOAD_SECONDS: 30
+      TRACE_PARSE_SECONDS: 60
+      TRACE_WORKER_MEMORY_MB: 2048
+      TRACE_WORKER_CPU_SECONDS: 45
+    restart: unless-stopped
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+      - /app/.next/cache:size=32m,uid=1000,gid=1000
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 512m
+    cpus: 1
+    restart: unless-stopped
+  gateway:
+    image: nginx:1.28-alpine
+    user: "101:101"
+    entrypoint: [nginx, -g, "daemon off;"]
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "127.0.0.1:${TRACE_PORT:-3000}:8080"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 32
+    mem_limit: 64m
+    cpus: 0.5
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, "http://127.0.0.1:8080/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped

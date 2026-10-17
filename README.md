@@ -37,6 +37,14 @@ The example contains 135 elements, two excluded items, three findings and four r
 
 ## Run locally
 
+With Docker and Compose v2, start the complete production stack from the repository root:
+
+```sh
+docker compose up --build -d --wait
+```
+
+Open [localhost:3000](http://localhost:3000). See [deployment and import budgets](docs/DEPLOYMENT.md) for operation, smoke checks and hosting boundaries. The setup below is for development without Docker.
+
 Requires **Node.js 22+** and **Python 3.12**. The bundled example works with the frontend alone; importing your own IFC also needs the Python service. No API key or external inference service is needed.
 
 ### Frontend
@@ -77,6 +85,8 @@ Use **Import model** for the current IFC and **Revision impact → Add baseline*
 
 Uploads are limited to **25 MB and 5,000 physical elements**. Temporary IFC files are deleted after parsing. Review state stays in IndexedDB on the current browser/device; clearing browser data removes it. JSON exports are evidence records, not importable workspace backups.
 
+Each import runs in a disposable parser process with a 60-second server deadline. One import is admitted at a time by default; excess requests receive a retry response. Upload bodies have a separate size and time budget. Disconnecting stops the worker. Linux deployments also enforce worker CPU and address-space limits.
+
 ## What the workspace does
 
 | Task | Behavior |
@@ -94,7 +104,7 @@ Changing a model or rate invalidates active acknowledgements from the previous r
 ## Engineering
 
 ```text
-IFC file → FastAPI / IfcOpenShell → ModelSnapshot v1.0
+IFC file → bounded upload → isolated IfcOpenShell worker → ModelSnapshot v1.0
                                          ↓
 Bundled IFC snapshot ───────────→ deterministic evaluator
                                          ↓
@@ -104,6 +114,7 @@ Bundled IFC snapshot ───────────→ deterministic evaluato
 ```
 
 - [`backend/ifc_parser.py`](backend/ifc_parser.py) extracts occurrence-level quantities and their unit provenance. It rejects duplicate identities and ambiguous quantities.
+- [`backend/parser_process.py`](backend/parser_process.py) supervises parsing; [`backend/import_guard.py`](backend/import_guard.py) bounds requests before multipart allocation.
 - [`backend/tessellation.py`](backend/tessellation.py) handles convex planar meshes, mapped instances and straight rectangular/convex-profile extrusions. More complex bodies go to IfcOpenShell's native geometry module. Unsupported shapes keep their ledger records and visible warnings.
 - [`frontend/lib/model.ts`](frontend/lib/model.ts) owns pricing, findings and revision comparison. The demo and real imports use this same evaluator.
 - [`frontend/components/model-viewer.tsx`](frontend/components/model-viewer.tsx) renders on changes and while interaction settles, then stops requesting frames. It disposes scene resources and respects reduced motion.
@@ -115,7 +126,7 @@ Declared IFC quantities are **source declarations, not independently measured ge
 
 Revision comparison requires stable GlobalIds and shared model coordinates. Fingerprints ignore vertex numbering, triangle order and winding on a 1 µm grid; different triangulation can still register a difference. Missing or older fingerprints are unverified and require re-importing both models for geometry comparison.
 
-This is a working local prototype. There is no hosted collaboration, authentication, IDS import, BCF export or clash detection. Complex native geometry, larger customer models and production deployment still need further validation. The [engineering assessment](docs/PRODUCT_REVIEW.md) explains the scope and tradeoffs.
+This is a working local prototype with a packaged local deployment. There is no hosted collaboration, authentication, IDS import, BCF export or clash detection. Linux integration tests cover native curved profiles, mapped instances and opening subtraction; larger customer models and public hosting still need validation. The [engineering assessment](docs/PRODUCT_REVIEW.md) explains the scope and tradeoffs.
 
 ## Development and checks
 
@@ -131,7 +142,7 @@ cd backend
 ..\.venv\Scripts\python -m pytest -q
 ```
 
-On macOS/Linux, use `../.venv/bin/python` for the backend check. The suite currently has **13 frontend and 17 backend tests**. [GitHub Actions](https://github.com/SanishKumar/AgenticBIM/actions/workflows/checks.yml) runs both suites, lint and the production build. The [verification record](docs/VERIFICATION.md) documents browser checks and coverage limits.
+On macOS/Linux, use `../.venv/bin/python` for the backend check. The suite currently has **13 frontend and 34 backend tests**, including two Linux-native integration checks. [GitHub Actions](https://github.com/SanishKumar/AgenticBIM/actions/workflows/checks.yml) runs both suites, lint, the production build, a production dependency audit and the complete container smoke check. The [verification record](docs/VERIFICATION.md) documents browser checks and coverage limits.
 
 The production build uses webpack for consistent Windows behavior. To serve it locally, run `npm run build` followed by `npm start` in `frontend`.
 

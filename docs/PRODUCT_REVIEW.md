@@ -50,6 +50,7 @@ Trace's product hypothesis is that a small, browser-based evidence handoff can b
 - Large survey coordinates are recentered in double precision before GPU conversion. Both versions of an element share the same origin, preserving displacement in the comparison overlay.
 - Review notes persisted locally. Model/rate changes invalidate their active context. Evidence export includes source fingerprints, assumptions, findings, and current notes.
 - Two downloadable synthetic IFC revisions generated from a repeatable script. No live upload silently falls back to them.
+- Bounded import admission, upload deadlines and a disposable parser process with cancellation and a server deadline. Linux workers also have CPU, address-space and output-file limits. A Compose stack packages the frontend, API and request-limiting gateway behind a loopback-only port.
 
 ## Deliberate limits
 
@@ -58,7 +59,7 @@ Trace's product hypothesis is that a small, browser-based evidence handoff can b
 - Overall door width is not a clear opening measurement. The width rule is a project coordination prompt, not a building-code verdict.
 - Convex planar tessellations, nested mapped instances, and straight rectangular/convex-polyline extrusions can render without the native CAD kernel. Curves, concave profiles, tapered solids, CSG and opening subtraction require the IfcOpenShell geometry module. Unsupported geometry stays in the ledger with a visible warning. The direct path rejects an entire unsupported body rather than showing a partial shape.
 - No BCF export, IDS import, clash detection, multi-user review, approval signing, server storage, authentication, or job queue is implied.
-- The API is intended for local use. Multi-user hosting requires parser process isolation, concurrency limits, authentication, quotas, cancellation, and resource/time budgets enforced on the server. The browser timeout is not a server execution limit.
+- The API is intended for local use. Process isolation, import admission, cancellation and resource/time budgets are implemented. Multi-user hosting still requires authentication, per-user quotas, access policy, TLS and operational monitoring. Process separation alone is not a security sandbox.
 - Geometry fingerprints are conservative, not topology-aware: vertex/triangle order and winding are ignored, but different triangulation may show as changed. Coordinates are quantized to a 1 µm grid. New GlobalIds cannot be reliably paired; models are not automatically aligned. Unavailable or incompatible geometry is explicitly unverified.
 - A single material assignment does not establish a complete construction assembly or measurement standard. Rate ownership and source-model quality remain human responsibilities.
 - Default review state is stored on the current browser/device. Clearing browser data removes it. JSON is an evidence export, not an importable workspace backup.
