@@ -15,6 +15,7 @@ import {
   CircleHelp,
   ClipboardCheck,
   Fingerprint,
+  FolderArchive,
   Focus,
   GitCompareArrows,
   Layers3,
@@ -40,6 +41,12 @@ import {
   type ReviewPolicy,
 } from "@/lib/model";
 import { loadWorkspace, saveWorkspace } from "@/lib/storage";
+import {
+  validateModelSnapshot,
+  workspaceContext,
+  type Workspace as SavedWorkspace,
+} from "@/lib/workspace-backup";
+import BackupDialog from "./backup-dialog";
 import Dialog from "./dialog";
 import EvidenceInspector from "./evidence-inspector";
 import AssumptionsDialog from "./assumptions-dialog";
@@ -56,7 +63,7 @@ const ModelViewer = dynamic(() => import("./model-viewer"), {
   ),
 });
 type Tab = "review" | "quantities" | "revisions";
-type Modal = "import" | "assumptions" | "method" | "export" | null;
+type Modal = "import" | "assumptions" | "method" | "export" | "backup" | null;
 const download = (name: string, value: string, type: string) => {
   const url = URL.createObjectURL(new Blob([value], { type }));
   const anchor = document.createElement("a");
@@ -103,6 +110,7 @@ export default function Workspace() {
   const [dragging, setDragging] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const request = useRef<AbortController | null>(null);
+  const autosaveBlocked = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,6 +119,8 @@ export default function Workspace() {
       try {
         saved = await loadWorkspace();
       } catch {
+        // Do not overwrite an unreadable stored review with the example project.
+        autosaveBlocked.current = true;
         setStorageError(true);
       }
       if (cancelled) return;
@@ -138,20 +148,23 @@ export default function Workspace() {
     };
   }, []);
 
-  const context = model ? `${model.model_hash}:${JSON.stringify(policy)}` : "";
+  const context = model ? workspaceContext(model, policy) : "";
   const activeDecisions = useMemo(
     () => (decisionContext === context ? decisions : {}),
     [context, decisions, decisionContext],
   );
   useEffect(() => {
-    if (ready && model)
+    if (ready && model && !autosaveBlocked.current)
       saveWorkspace({
         model,
         baseline,
         policy,
         decisions,
         decisionContext,
-      }).catch(() => setStorageError(true));
+      }).then(
+        () => setStorageError(false),
+        () => setStorageError(true),
+      );
   }, [ready, model, baseline, policy, decisions, decisionContext]);
   useEffect(() => {
     if (!notice) return;
@@ -248,13 +261,7 @@ export default function Workspace() {
             : "The IFC service is unavailable. Start the backend using the README instructions, then retry.",
         );
       }
-      const next = (await response.json()) as ModelSnapshot;
-      if (
-        next.version !== "1.0" ||
-        !Array.isArray(next.elements) ||
-        !next.elements.length
-      )
-        throw new Error("The service returned an unsupported or empty model.");
+      const next = validateModelSnapshot(await response.json());
       if (importTarget === "baseline") setBaseline(next);
       else {
         setModel(next);
@@ -297,6 +304,26 @@ export default function Workspace() {
     } catch (err) {
       setNotice(err instanceof Error ? err.message : "Example unavailable");
     }
+  }
+  async function restoreWorkspace(next: SavedWorkspace) {
+    await saveWorkspace(next);
+    autosaveBlocked.current = false;
+    setStorageError(false);
+    setModel(next.model);
+    setBaseline(next.baseline);
+    setPolicy(next.policy);
+    setDecisions(next.decisions);
+    setDecisionContext(next.decisionContext);
+    setSelectedId(null);
+    setLevel("all");
+    setQuery("");
+    setFilter("all");
+    setTab("review");
+    setExploded(false);
+    setXray(false);
+    setResetKey((key) => key + 1);
+    setModal(null);
+    setNotice("Workspace restored and saved on this device");
   }
   function acknowledge(finding: Finding, note: string) {
     if (!note.trim()) return;
@@ -525,6 +552,10 @@ export default function Workspace() {
             <ArrowDownToLine size={18} />
             Evidence export
           </button>
+          <button onClick={() => setModal("backup")}>
+            <FolderArchive size={18} />
+            Workspace backups
+          </button>
         </nav>
         <div className="sidebar-bottom">
           <div className="local-card">
@@ -621,8 +652,11 @@ export default function Workspace() {
           )}
           {storageError && (
             <div className="alert">
-              Browser storage is unavailable. Export your evidence before
-              closing this session.
+              Local saving is unavailable or the saved review could not be read.
+              Download a workspace backup before closing this session.{" "}
+              <button className="text-link" onClick={() => setModal("backup")}>
+                Open backups <ArrowUpRight size={13} />
+              </button>
             </div>
           )}
           <section className="metrics" aria-label="Model review summary">
@@ -950,6 +984,7 @@ export default function Workspace() {
 
           {tab === "quantities" && (
             <QuantityLedger
+              key={model.model_hash}
               model={model}
               review={review}
               query={query}
@@ -1118,6 +1153,18 @@ export default function Workspace() {
         />
       )}
 
+      {modal === "backup" && (
+        <BackupDialog
+          workspace={{ model, baseline, policy, decisions, decisionContext }}
+          onClose={() => setModal(null)}
+          onRestore={restoreWorkspace}
+          onDownload={(content) => {
+            download("trace-workspace.trace.json", content, "application/json");
+            setNotice("Workspace backup downloaded");
+          }}
+        />
+      )}
+
       {modal === "export" && (
         <Dialog
           title="A review you can hand over."
@@ -1162,6 +1209,10 @@ export default function Workspace() {
               turn missing data into verified data.
             </p>
           </div>
+          <button className="text-link" onClick={() => setModal("backup")}>
+            Need to reopen this review later? Workspace backups{" "}
+            <ArrowUpRight size={14} />
+          </button>
         </Dialog>
       )}
 
@@ -1225,7 +1276,7 @@ export default function Workspace() {
             <p>
               Models and review notes are stored in this browser. The local API
               deletes temporary uploads. Clearing browser data removes the
-              workspace; export a record to retain it.
+              workspace; download a workspace backup to reopen it later.
             </p>
           </div>
           <div className="dialog-actions">

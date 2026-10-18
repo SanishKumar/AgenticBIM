@@ -1,12 +1,4 @@
-import type { Decisions, ModelSnapshot, ReviewPolicy } from "./model";
-
-export type Workspace = {
-  model: ModelSnapshot;
-  baseline: ModelSnapshot | null;
-  policy: ReviewPolicy;
-  decisions: Decisions;
-  decisionContext: string;
-};
+import { validateWorkspace, type Workspace } from "./workspace-backup";
 const open = () =>
   new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open("trace-workspace", 1);
@@ -15,16 +7,37 @@ const open = () =>
     request.onerror = () => reject(request.error);
   });
 export async function loadWorkspace(): Promise<Workspace | null> {
+  await pendingSave.catch(() => {});
   const db = await open();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction("state", "readonly");
     const request = transaction.objectStore("state").get("workspace");
-    request.onsuccess = () => resolve(request.result ?? null);
-    request.onerror = () => reject(request.error);
-    transaction.oncomplete = () => db.close();
+    transaction.oncomplete = () => {
+      db.close();
+      try {
+        resolve(
+          request.result == null ? null : validateWorkspace(request.result),
+        );
+      } catch (error) {
+        reject(error);
+      }
+    };
+    transaction.onabort = transaction.onerror = () => {
+      db.close();
+      reject(transaction.error);
+    };
   });
 }
-export async function saveWorkspace(workspace: Workspace) {
+// Preserve call order even when opening IndexedDB resolves out of order.
+// A restore waits for prior autosaves and commits before replacing visible state.
+let pendingSave: Promise<void> = Promise.resolve();
+export function saveWorkspace(workspace: Workspace) {
+  pendingSave = pendingSave
+    .catch(() => {})
+    .then(() => writeWorkspace(workspace));
+  return pendingSave;
+}
+async function writeWorkspace(workspace: Workspace) {
   const db = await open();
   return new Promise<void>((resolve, reject) => {
     const transaction = db.transaction("state", "readwrite");

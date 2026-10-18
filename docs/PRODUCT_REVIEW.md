@@ -49,6 +49,7 @@ Trace's product hypothesis is that a small, browser-based evidence handoff can b
 - The viewer renders on change and while orbit damping or floor movement settles, then stops requesting frames. Background tabs suspend rendering; reduced motion disables floor interpolation and orbit damping.
 - Large survey coordinates are recentered in double precision before GPU conversion. Both versions of an element share the same origin, preserving displacement in the comparison overlay.
 - Review notes persisted locally. Model/rate changes invalidate their active context. Evidence export includes source fingerprints, assumptions, findings, and current notes.
+- A separate workspace backup retains both snapshots and their geometry, assumptions and notes. Restore validates the file and previews its contents before replacing the review. Quantity ledgers render 50 rows per page while totals and CSV retain the full model.
 - Two downloadable synthetic IFC revisions generated from a repeatable script. No live upload silently falls back to them.
 - Bounded import admission, upload deadlines and a disposable parser process with cancellation and a server deadline. Linux workers also have CPU, address-space and output-file limits. A Compose stack packages the frontend, API and request-limiting gateway behind a loopback-only port.
 
@@ -62,7 +63,7 @@ Trace's product hypothesis is that a small, browser-based evidence handoff can b
 - The API is intended for local use. Process isolation, import admission, cancellation and resource/time budgets are implemented. Multi-user hosting still requires authentication, per-user quotas, access policy, TLS and operational monitoring. Process separation alone is not a security sandbox.
 - Geometry fingerprints are conservative, not topology-aware: vertex/triangle order and winding are ignored, but different triangulation may show as changed. Coordinates are quantized to a 1 µm grid. New GlobalIds cannot be reliably paired; models are not automatically aligned. Unavailable or incompatible geometry is explicitly unverified.
 - A single material assignment does not establish a complete construction assembly or measurement standard. Rate ownership and source-model quality remain human responsibilities.
-- Default review state is stored on the current browser/device. Clearing browser data removes it. JSON is an evidence export, not an importable workspace backup.
+- Default review state is stored on the current browser/device. Clearing browser data removes it; a downloaded workspace backup can restore it. Backups are editable snapshots, not signed evidence or original IFC files. Evidence JSON remains a separate handoff record.
 
 ## How to validate whether the approach is worth building further
 

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { ArrowRight, Plus, X } from "lucide-react";
 import { defaultPolicy, type ReviewPolicy } from "@/lib/model";
+import { MAX_RATES, MAX_TEXT } from "@/lib/workspace-backup";
 import Dialog from "./dialog";
 export default function AssumptionsDialog({
   policy,
@@ -30,6 +31,7 @@ export default function AssumptionsDialog({
           <div className="rate-row" key={i}>
             <input
               aria-label={`Material ${i + 1}`}
+              maxLength={MAX_TEXT}
               value={rate.material}
               onChange={(e) =>
                 setDraftPolicy((p) => ({
@@ -94,6 +96,7 @@ export default function AssumptionsDialog({
             <input
               className="rate-source"
               aria-label={`Rate source ${i + 1}`}
+              maxLength={MAX_TEXT}
               placeholder="Quote reference or assumption source"
               value={rate.source}
               onChange={(e) =>
@@ -110,6 +113,7 @@ export default function AssumptionsDialog({
       </div>
       <button
         className="text-link add-rate"
+        disabled={draftPolicy.rates.length >= MAX_RATES}
         onClick={() =>
           setDraftPolicy((p) => ({
             ...p,

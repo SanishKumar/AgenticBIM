@@ -8,6 +8,7 @@ These are captures of the running local Trace app. The geometry comes from the i
 | `trace-revisions.jpg` | Full revision workbench, captured 17 October 2026 |
 | `trace-evidence.jpg` | Selected slab with an undeclared volume and excluded allowance, captured 17 October 2026 |
 | `trace-walkthrough.gif` | Seven actual app screens, captured 17 October 2026 and assembled with reading pauses |
+| `trace-backup.jpg` | Workspace restore preview, captured 18 October 2026; both model versions, assumptions, note counts and replacement controls |
 
 The GIF is a screen sequence, not a continuous video or a rendering-performance demonstration. Its frames show the model, floor separation, a missing-quantity finding, the door revision overlay, baseline geometry, current geometry, and source calculations. No interface elements or model geometry were added to the captures.
 

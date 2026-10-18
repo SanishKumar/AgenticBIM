@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { MAX_TEXT } from "@/lib/workspace-backup";
 import {
   ArrowRight,
   Check,
@@ -153,6 +154,7 @@ export default function EvidenceInspector({
                       <label className="note-label">
                         Review note
                         <textarea
+                          maxLength={MAX_TEXT}
                           value={note}
                           onChange={(e) => setNote(e.target.value)}
                           placeholder="Record the decision or next action…"

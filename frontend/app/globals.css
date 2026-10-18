@@ -1440,6 +1440,121 @@ tr:hover td {
   color: #60784a;
   font-size: 12px;
 }
+.ledger-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  border-top: 1px solid #e3ead7;
+  font-size: 11px;
+  color: #60784a;
+}
+.ledger-pagination > div,
+.ledger-pagination label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ledger-pagination select {
+  border: 1px solid #d8e2cc;
+  border-radius: 4px;
+  padding: 5px;
+  background: #fff;
+  color: inherit;
+}
+.ledger-panel .table-scroll {
+  max-height: 560px;
+  overflow: auto;
+}
+.ledger-panel thead {
+  position: sticky;
+  top: 0;
+  background: #fcfdf9;
+  z-index: 1;
+}
+.backup-restore {
+  border-top: 1px solid #e3ead7;
+  padding-top: 20px;
+  margin-top: 20px;
+}
+.backup-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.backup-heading h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+.backup-restore p,
+.backup-preview p,
+.backup-footnote {
+  font-size: 11px;
+  line-height: 1.7;
+  color: #6c7c5f;
+}
+.backup-footnote {
+  margin: 20px 0 0;
+}
+.backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+}
+.backup-another {
+  margin-top: 16px;
+}
+.backup-preview {
+  background: #f3f7eb;
+  border: 1px solid #dce5cf;
+  border-radius: 7px;
+  padding: 18px;
+  margin-top: 20px;
+  overflow-wrap: anywhere;
+}
+.backup-preview h3 {
+  margin: 8px 0;
+  font:
+    24px Georgia,
+    serif;
+}
+.backup-preview dl {
+  margin: 18px 0;
+  font-size: 11px;
+}
+.backup-preview dl > div {
+  display: grid;
+  grid-template-columns: 105px minmax(0, 1fr);
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid #dfe7d5;
+}
+.backup-preview dt {
+  color: #6c7c5f;
+}
+.backup-preview dd {
+  margin: 0;
+}
+.backup-preview .backup-replacement {
+  color: #805a31;
+  margin-top: 18px;
+}
+@media (max-width: 600px) {
+  .ledger-pagination {
+    flex-wrap: wrap;
+    padding-inline: 14px;
+  }
+  .backup-preview {
+    padding: 14px;
+  }
+  .backup-preview dl > div {
+    grid-template-columns: 85px minmax(0, 1fr);
+    gap: 8px;
+  }
+}
 .ledger-total > span > small {
   display: block;
   font-size: 9px;

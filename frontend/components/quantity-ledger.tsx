@@ -1,5 +1,12 @@
 "use client";
-import { ArrowDownToLine, Box, Search } from "lucide-react";
+import { useState } from "react";
+import {
+  ArrowDownToLine,
+  Box,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+} from "lucide-react";
 import {
   money,
   evidenceNumber,
@@ -22,11 +29,17 @@ export default function QuantityLedger({
   onSelect,
   onExport,
 }: Props) {
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
   const visibleLines = review.lines.filter(({ element }) =>
     `${element.name} ${element.type} ${element.materials.join(" ")} ${element.id}`
       .toLowerCase()
       .includes(query.toLowerCase()),
   );
+  const pageCount = Math.max(1, Math.ceil(visibleLines.length / pageSize));
+  const currentPage = Math.min(page, pageCount - 1);
+  const start = currentPage * pageSize;
+  const pageLines = visibleLines.slice(start, start + pageSize);
   return (
     <section className="ledger-panel">
       <div className="list-heading">
@@ -46,12 +59,56 @@ export default function QuantityLedger({
               aria-label="Search elements"
               placeholder="Search name, type or material…"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(0);
+              }}
             />
           </label>
           <button className="secondary-button" onClick={onExport}>
             <ArrowDownToLine size={14} />
             CSV
+          </button>
+        </div>
+      </div>
+      <div className="ledger-pagination" aria-label="Quantity ledger pages">
+        <span role="status">
+          {visibleLines.length
+            ? `${start + 1}–${start + pageLines.length} of ${visibleLines.length}`
+            : "0 results"}
+          {query ? " matching elements" : " elements"}
+        </span>
+        <div>
+          <button
+            className="icon-button"
+            aria-label="Previous quantity page"
+            disabled={currentPage === 0}
+            onClick={() => setPage(currentPage - 1)}
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <label>
+            Page{" "}
+            <select
+              aria-label="Quantity page"
+              value={currentPage}
+              onChange={(event) => setPage(Number(event.target.value))}
+            >
+              {Array.from({ length: pageCount }, (_, index) => (
+                <option key={index} value={index}>
+                  {index + 1}
+                </option>
+              ))}
+            </select>{" "}
+            of {pageCount}
+          </label>
+          <button
+            className="icon-button"
+            aria-label="Next quantity page"
+            disabled={currentPage >= pageCount - 1}
+            onClick={() => setPage(currentPage + 1)}
+          >
+            <ChevronRight size={16} />
           </button>
         </div>
       </div>
@@ -68,7 +125,7 @@ export default function QuantityLedger({
             </tr>
           </thead>
           <tbody>
-            {visibleLines.map(({ element: e, price }) => (
+            {pageLines.map(({ element: e, price }) => (
               <tr key={e.id}>
                 <td>
                   <button
@@ -117,7 +174,7 @@ export default function QuantityLedger({
       </div>
       <div className="ledger-total">
         <span>
-          Known material allowance{" "}
+          Full model material allowance{" "}
           <small>
             {review.excludedCount} elements excluded · no labour, tax or
             installation

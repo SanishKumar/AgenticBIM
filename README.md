@@ -23,6 +23,7 @@ Try the same review in the included Northbank Studio project:
 3. Open **Revision impact** and select **A1-D01 · Stair lobby door**. Compare the baseline and current geometry, then inspect the declared width: **1 m → 0.78 m**.
 4. Follow its material allowance: **0.264 m³ × $620/m³ = $163.68**, changing to **0.20592 m³ × $620/m³ = $127.67**. The line impact is **−$36.01**, using the same rate for both versions.
 5. Change a rate under **Assumptions**, then export the **CSV schedule** or **JSON evidence record** to inspect the calculations outside the app.
+6. Open **Workspace backups** to save the models, geometry, assumptions and notes together. Choose that file in another browser, inspect the preview, then restore the review.
 
 The example contains 135 elements, two excluded items, three findings and four revision changes. Both source files are included: [baseline IFC](frontend/public/demo/northbank-r01.ifc) and [current IFC](frontend/public/demo/northbank-r02.ifc).
 
@@ -32,6 +33,13 @@ The example contains 135 elements, two excluded items, three findings and four r
 ![Missing volume remains an explicit exclusion](docs/trace-evidence.jpg)
 
 ![Revision workbench with shared-coordinate geometry and before/after evidence](docs/trace-revisions.jpg)
+
+</details>
+
+<details>
+<summary>Workspace recovery: preview before replacing a review</summary>
+
+![Workspace backup preview with both models, assumptions and note counts](docs/trace-backup.jpg)
 
 </details>
 
@@ -83,7 +91,7 @@ The frontend proxies `/api/ifc` to this local service. For a different address, 
 
 Use **Import model** for the current IFC and **Revision impact → Add baseline** for an earlier export of the same project. A successful current-model import replaces the local workspace and clears the baseline. Failed imports preserve the existing review.
 
-Uploads are limited to **25 MB and 5,000 physical elements**. Temporary IFC files are deleted after parsing. Review state stays in IndexedDB on the current browser/device; clearing browser data removes it. JSON exports are evidence records, not importable workspace backups.
+Uploads are limited to **25 MB and 5,000 physical elements**. Temporary IFC files are deleted after parsing. Review state stays in IndexedDB on the current browser/device; clearing browser data removes it. Use **Workspace backups** to download a `.trace.json` file you can restore later. Evidence JSON and CSV remain separate handoff formats. See [backup and recovery](docs/WORKSPACE_BACKUPS.md) for the file limits and restore behavior.
 
 Each import runs in a disposable parser process with a 60-second server deadline. One import is admitted at a time by default; excess requests receive a retry response. Upload bodies have a separate size and time budget. Disconnecting stops the worker. Linux deployments also enforce worker CPU and address-space limits.
 
@@ -98,6 +106,8 @@ Each import runs in a disposable parser process with a 60-second server deadline
 | Compare revisions | GlobalId matching, shared-coordinate overlays, removed-element inspection and before/after quantity evidence |
 | Inspect comparison gaps | An explicit queue for missing or incompatible geometry fingerprints |
 | Hand off evidence | CSV quantity schedule and versioned JSON containing sources, assumptions, findings, decisions and comparison coverage |
+| Reopen a review | Versioned workspace backup with both models, geometry, assumptions and notes; validated preview before replacement |
+| Navigate a large ledger | 50 rows per page, page selection and search; totals and CSV always cover the full model |
 
 Changing a model or rate invalidates active acknowledgements from the previous review context. Acknowledging a finding never changes its source data or makes an excluded item priced.
 
@@ -119,6 +129,7 @@ Bundled IFC snapshot ───────────→ deterministic evaluato
 - [`frontend/lib/model.ts`](frontend/lib/model.ts) owns pricing, findings and revision comparison. The demo and real imports use this same evaluator.
 - [`frontend/components/model-viewer.tsx`](frontend/components/model-viewer.tsx) renders on changes and while interaction settles, then stops requesting frames. It disposes scene resources and respects reduced motion.
 - [`frontend/lib/render-geometry.ts`](frontend/lib/render-geometry.ts) recenters survey coordinates before GPU conversion; revision meshes share the same origin so displacement is preserved.
+- [`frontend/lib/workspace-backup.ts`](frontend/lib/workspace-backup.ts) validates restored and persisted data before evaluation or rendering. Restore commits to IndexedDB before replacing the visible review; queued writes preserve save order.
 
 ### Limits that matter
 
@@ -142,7 +153,7 @@ cd backend
 ..\.venv\Scripts\python -m pytest -q
 ```
 
-On macOS/Linux, use `../.venv/bin/python` for the backend check. The suite currently has **13 frontend and 34 backend tests**, including two Linux-native integration checks. [GitHub Actions](https://github.com/SanishKumar/AgenticBIM/actions/workflows/checks.yml) runs both suites, lint, the production build, a production dependency audit and the complete container smoke check. The [verification record](docs/VERIFICATION.md) documents browser checks and coverage limits.
+On macOS/Linux, use `../.venv/bin/python` for the backend check. The suite currently has **22 frontend and 34 backend tests**, including two Linux-native integration checks. [GitHub Actions](https://github.com/SanishKumar/AgenticBIM/actions/workflows/checks.yml) runs both suites, lint, the production build, a production dependency audit and the complete container smoke check. The [verification record](docs/VERIFICATION.md) documents browser checks and coverage limits.
 
 The production build uses webpack for consistent Windows behavior. To serve it locally, run `npm run build` followed by `npm start` in `frontend`.
 

@@ -7,11 +7,13 @@ export default function Dialog({
   onClose,
   children,
   wide = false,
+  busy = false,
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
   wide?: boolean;
+  busy?: boolean;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -21,7 +23,10 @@ export default function Dialog({
     <dialog
       ref={dialog}
       className={`dialog ${wide ? "dialog-wide" : ""}`}
-      onCancel={onClose}
+      onCancel={(event) => {
+        if (busy) event.preventDefault();
+        else onClose();
+      }}
       aria-label={title}
     >
       <div className="dialog-heading">
@@ -30,6 +35,7 @@ export default function Dialog({
           className="icon-button"
           onClick={onClose}
           aria-label="Close dialog"
+          disabled={busy}
         >
           <X size={20} />
         </button>

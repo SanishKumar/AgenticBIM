@@ -1,4 +1,16 @@
-# Verification · 17 October 2026
+# Verification · 18 October 2026
+
+## Workspace recovery and ledger follow-up
+
+- **22 frontend tests passed**, with lint, TypeScript and a production build. Nine new tests cover complete backup round trips, stale note contexts, missing data, unsupported files, duplicate identities, model/geometry budgets, malformed meshes, inconsistent quantity conversions and invalid assumptions/notes.
+- In the browser, acknowledged a missing-volume finding, downloaded a workspace backup, changed the concrete rate from 185 to 200 USD/m³, then restored the saved review. The allowance returned from $128,108 to $123,782; the note and its acknowledgement survived a page reload. The slab remained excluded throughout.
+- An evidence JSON file was rejected by the backup chooser. No replacement control appeared; the current model, subtotal and acknowledgement stayed intact.
+- Ledger paging showed 50, 50 and 35 rows for the 135-element example. The last page disabled Next. Searching from that page for `A1-D01` reset to one matching row. Its CSV download still contained 135 data rows and two explicit exclusions.
+- The restore dialog and ledger were checked at a 390-pixel viewport. The dialog had no internal horizontal overflow; the page scroll width equalled its client width. Desktop sizing was restored afterward.
+- No browser console errors were observed. The original example workspace was restored after testing. The [restore preview capture](trace-backup.jpg) is from the running app.
+- Storage failure behavior is implemented by committing the restore transaction before changing visible state. A real browser quota-exhaustion failure and simultaneous-tab edits were not simulated; backups do not provide multi-user or multi-tab synchronization.
+
+Earlier verification records follow; their test counts describe those earlier revisions.
 
 ## Import and packaging follow-up
 
