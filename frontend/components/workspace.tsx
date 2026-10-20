@@ -11,7 +11,6 @@ import {
   Check,
   CheckCheck,
   ChevronDown,
-  ChevronRight,
   CircleHelp,
   ClipboardCheck,
   Fingerprint,
@@ -80,6 +79,14 @@ async function demo(revision: number): Promise<ModelSnapshot> {
     );
   return response.json();
 }
+function scrollToReview(selector: string) {
+  document.querySelector(selector)?.scrollIntoView({
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth",
+    block: "start",
+  });
+}
 
 export default function Workspace() {
   const [model, setModel] = useState<ModelSnapshot | null>(null);
@@ -111,6 +118,19 @@ export default function Workspace() {
   const input = useRef<HTMLInputElement>(null);
   const request = useRef<AbortController | null>(null);
   const autosaveBlocked = useRef(false);
+  const pendingSection = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (tab === "review" && pendingSection.current) {
+      scrollToReview(pendingSection.current);
+      pendingSection.current = null;
+    }
+  }, [tab]);
+
+  function revealReviewSection(selector: string) {
+    if (tab === "review") scrollToReview(selector);
+    else pendingSection.current = selector;
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -440,7 +460,11 @@ export default function Workspace() {
   if (!model || !review)
     return (
       <div className="app-loading">
-        <span className="brand-mark">t</span>
+        <span className="brand-symbol loading-symbol" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </span>
         <h1>Trace</h1>
         <p>{error || "Opening your model review workspace…"}</p>
         {error ? (
@@ -480,161 +504,145 @@ export default function Workspace() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <Link className="brand" href="/" aria-label="Trace home">
-          <span className="brand-mark">
-            t<span />
-          </span>
-          <span>
-            trace<span className="brand-dot">.</span>
-            <small>BY AGENTICBIM</small>
-          </span>
-        </Link>
-        <div className="workspace-label">WORKSPACE</div>
-        <button
-          className="project-switch"
-          onClick={() => openImport("current")}
-        >
-          <span className="project-icon">
-            <Box size={18} />
-          </span>
-          <span>
-            {model.project_name}
-            <small>
-              {model.source === "demo" ? "Example project" : "Local project"}
-            </small>
-          </span>
-          <ChevronDown size={14} />
-        </button>
-        <nav className="side-nav" aria-label="Workspace navigation">
-          <button
-            className={tab === "review" ? "active" : ""}
-            onClick={() => {
-              setTab("review");
-              setQuery("");
-            }}
-          >
-            <Box size={18} />
-            Model review
-            <span className="nav-dot" />
-          </button>
-          <button
-            className={tab === "quantities" ? "active" : ""}
-            onClick={() => {
-              setTab("quantities");
-              setQuery("");
-            }}
-          >
-            <Layers3 size={18} />
-            Quantity ledger
-          </button>
-          <button
-            className={tab === "revisions" ? "active" : ""}
-            onClick={() => {
-              setTab("revisions");
-              setQuery("");
-            }}
-          >
-            <GitCompareArrows size={18} />
-            Revision impact
-            {baseline && <span className="nav-count">{changes.length}</span>}
-          </button>
-          <div className="nav-separator" />
-          <button
-            onClick={() => {
-              setModal("assumptions");
-            }}
-          >
-            <SlidersHorizontal size={18} />
-            Assumptions
-          </button>
-          <button onClick={() => setModal("export")}>
-            <ArrowDownToLine size={18} />
-            Evidence export
-          </button>
-          <button onClick={() => setModal("backup")}>
-            <FolderArchive size={18} />
-            Workspace backups
-          </button>
-        </nav>
-        <div className="sidebar-bottom">
-          <div className="local-card">
-            <span className="status-dot" />
-            <strong>A clear chain of evidence.</strong>
-            <p>
-              From source model
-              <br />
-              to a decision you can explain.
-            </p>
-            <button onClick={() => setModal("method")}>
-              How Trace works <ArrowUpRight size={14} />
-            </button>
-          </div>
-          <button className="help-link" onClick={() => setModal("method")}>
-            <CircleHelp size={17} />
-            Review methodology<span>v1.0</span>
-          </button>
-          <div className="profile">
-            <span>LR</span>
-            <div>
-              Local reviewer<small>Saved on this device</small>
-            </div>
-            <ShieldCheck size={16} />
-          </div>
-        </div>
-      </aside>
-
-      <div className="main-shell">
-        <header className="topbar">
-          <div className="breadcrumb">
-            <span>Workspace</span>
-            <ChevronRight size={13} />
-            <strong>{model.project_name}</strong>
-          </div>
-          <div className="topbar-right">
-            <span className="local-status">
-              <span className="status-dot" />
-              {storageError ? "Session only" : "Local workspace"}
+      <a className="skip-link" href="#workspace-main">
+        Skip to workspace
+      </a>
+      <header className="app-header">
+        <div className="header-inner">
+          <Link className="brand" href="/" aria-label="Trace home">
+            <span className="brand-symbol" aria-hidden="true">
+              <i />
+              <i />
+              <i />
             </span>
+            <span>
+              trace<span className="brand-dot">.</span>
+            </span>
+            <small>MODEL REVIEW STUDIO</small>
+          </Link>
+          <nav className="workspace-nav" aria-label="Workspace navigation">
+            <button
+              className={tab === "review" ? "active" : ""}
+              aria-pressed={tab === "review"}
+              onClick={() => {
+                setTab("review");
+                setQuery("");
+              }}
+            >
+              <Box size={18} />
+              Model review
+            </button>
+            <button
+              className={tab === "quantities" ? "active" : ""}
+              aria-pressed={tab === "quantities"}
+              onClick={() => {
+                setTab("quantities");
+                setQuery("");
+              }}
+            >
+              <Layers3 size={18} />
+              Quantity ledger
+            </button>
+            <button
+              className={tab === "revisions" ? "active" : ""}
+              aria-pressed={tab === "revisions"}
+              onClick={() => {
+                setTab("revisions");
+                setQuery("");
+              }}
+            >
+              <GitCompareArrows size={18} />
+              Revision impact
+              {baseline && <span className="nav-count">{changes.length}</span>}
+            </button>
+          </nav>
+          <div className="header-actions">
+            <button
+              className="icon-button"
+              onClick={() => setModal("backup")}
+              aria-label="Workspace backups"
+              title="Workspace backups"
+            >
+              <FolderArchive size={18} />
+            </button>
             <button
               className="icon-button"
               onClick={() => setModal("method")}
               aria-label="Review methodology"
+              title="Review methodology"
             >
               <CircleHelp size={18} />
             </button>
-            <span className="avatar">LR</span>
+            <button
+              className="dark-button"
+              onClick={() => setModal("export")}
+              aria-label="Export review"
+            >
+              <ArrowDownToLine size={15} />
+              <span>
+                Export<span className="export-label-detail"> review</span>
+              </span>
+            </button>
           </div>
-        </header>
-        <main className="main-content">
+        </div>
+      </header>
+
+      <div className="main-shell">
+        <main className="main-content" id="workspace-main">
+          <div className="project-context">
+            <div className="project-context-left">
+              <button
+                className="project-switch"
+                onClick={() => openImport("current")}
+              >
+                <span className="project-icon">
+                  <Box size={16} />
+                </span>
+                <span>{model.project_name}</span>
+                <ChevronDown size={14} />
+              </button>
+              <span className="context-source">
+                {model.source === "demo"
+                  ? "Example project"
+                  : "Local IFC project"}
+              </span>
+            </div>
+            <span className="local-status">
+              <ShieldCheck size={13} />
+              {storageError ? "Session only" : "Local workspace"}
+            </span>
+          </div>
           <div className="page-heading">
             <div>
               <div className="eyebrow">
-                MODEL INTELLIGENCE /{" "}
-                {model.source === "demo" ? "EXAMPLE PROJECT" : "IFC IMPORT"}
+                {tab === "review"
+                  ? "THE MODEL REVIEW"
+                  : tab === "quantities"
+                    ? "THE QUANTITY LEDGER"
+                    : "THE REVISION WORKBENCH"}
               </div>
               <h1>
                 {tab === "review"
-                  ? "Confidence, before commitment."
+                  ? "See the whole picture."
                   : tab === "quantities"
-                    ? "Every number has a source."
-                    : "See what the revision changes."}
+                    ? "Every number, accounted for."
+                    : "Make every change visible."}
               </h1>
               <p>
                 {tab === "review"
-                  ? "Understand the model. Surface the gaps. Make the next call."
+                  ? "Inspect the source. Resolve the gaps. Review the next revision."
                   : tab === "quantities"
-                    ? "A measured allowance, with the unknowns kept in view."
-                    : "Follow changes by IFC identity, from geometry to material value."}
+                    ? "Declared quantities, clear assumptions, and an allowance you can trace."
+                    : "Two versions. One rate card. The evidence behind every difference."}
               </p>
             </div>
             <div className="heading-actions">
               <button
                 className="secondary-button"
-                onClick={() => setModal("export")}
+                onClick={() => setModal("assumptions")}
               >
-                <ArrowDownToLine size={15} />
-                Export review
+                <SlidersHorizontal size={15} />
+                Assumptions
               </button>
               <button
                 className="primary-button"
@@ -683,7 +691,7 @@ export default function Workspace() {
               <strong>
                 {review.coverage}
                 <small>%</small>
-                <div className="mini-bars">
+                <span className="mini-bars" aria-hidden="true">
                   {Array.from({ length: 16 }, (_, i) => (
                     <i
                       key={i}
@@ -692,7 +700,7 @@ export default function Workspace() {
                       }
                     />
                   ))}
-                </div>
+                </span>
               </strong>
               <span>Elements with a quantity and mapped rate</span>
             </div>
@@ -701,9 +709,8 @@ export default function Workspace() {
               onClick={() => {
                 setTab("review");
                 setFilter("open");
-                document
-                  .getElementById("review-list")
-                  ?.scrollIntoView({ behavior: "smooth", block: "center" });
+                setQuery("");
+                revealReviewSection("#review-list");
               }}
             >
               <div className="metric-label">
@@ -773,16 +780,18 @@ export default function Workspace() {
                       >
                         <button
                           className={colorMode === "material" ? "active" : ""}
+                          aria-pressed={colorMode === "material"}
                           onClick={() => setColorMode("material")}
                         >
                           Materials
                         </button>
                         <button
                           className={colorMode === "review" ? "active" : ""}
+                          aria-pressed={colorMode === "review"}
                           onClick={() => setColorMode("review")}
                         >
                           <span className="tiny-dot amber" />
-                          Review findings
+                          Findings
                         </button>
                       </div>
                       <span className="stage-source">
@@ -919,12 +928,7 @@ export default function Workspace() {
                         className={`finding-row finding-columns ${selectedId === e.id ? "selected" : ""}`}
                         onClick={() => {
                           revealElement(e.id);
-                          document
-                            .querySelector(".review-grid")
-                            ?.scrollIntoView({
-                              behavior: "smooth",
-                              block: "start",
-                            });
+                          revealReviewSection(".review-grid");
                         }}
                       >
                         <span className="finding-main">
@@ -936,6 +940,15 @@ export default function Workspace() {
                             <small>
                               {e.name} <b>·</b> {f.rule}
                             </small>
+                            <span className="compact-row-state">
+                              {f.severity === "blocker"
+                                ? "Cost excluded"
+                                : "Check design"}{" "}
+                              ·{" "}
+                              {activeDecisions[f.id]?.status === "acknowledged"
+                                ? "Noted"
+                                : "Open"}
+                            </span>
                           </span>
                         </span>
                         <span>{e.storey}</span>
@@ -993,6 +1006,7 @@ export default function Workspace() {
               onSelect={(id) => {
                 revealElement(id);
                 setTab("review");
+                revealReviewSection(".review-grid");
               }}
             />
           )}
@@ -1007,6 +1021,7 @@ export default function Workspace() {
               onSelect={(id) => {
                 revealElement(id);
                 setTab("review");
+                revealReviewSection(".review-grid");
               }}
             />
           )}

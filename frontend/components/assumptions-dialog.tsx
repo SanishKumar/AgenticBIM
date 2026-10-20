@@ -14,8 +14,53 @@ export default function AssumptionsDialog({
   onClose: () => void;
 }) {
   const [draftPolicy, setDraftPolicy] = useState(() => structuredClone(policy));
+  const actions = (
+    <div className="dialog-actions">
+      <button
+        className="secondary-button"
+        onClick={() => setDraftPolicy(structuredClone(defaultPolicy))}
+      >
+        Reset example rates
+      </button>
+      <button
+        className="primary-button"
+        disabled={
+          !Number.isFinite(draftPolicy.minDoorWidth) ||
+          draftPolicy.minDoorWidth < 0.1 ||
+          draftPolicy.minDoorWidth > 10 ||
+          draftPolicy.rates.some(
+            (r) =>
+              !r.material.trim() ||
+              !r.source.trim() ||
+              !Number.isFinite(r.value) ||
+              r.value < 0 ||
+              r.value > 1e8,
+          ) ||
+          new Set(draftPolicy.rates.map((r) => r.material.trim())).size !==
+            draftPolicy.rates.length
+        }
+        onClick={() => {
+          onApply({
+            ...draftPolicy,
+            rates: draftPolicy.rates.map((r) => ({
+              ...r,
+              material: r.material.trim(),
+            })),
+          });
+        }}
+      >
+        Apply assumptions
+        <ArrowRight size={15} />
+      </button>
+    </div>
+  );
   return (
-    <Dialog title="Make the assumptions explicit." wide onClose={onClose}>
+    <Dialog
+      title="Make the assumptions explicit."
+      wide
+      onClose={onClose}
+      footer={actions}
+    >
       <p className="dialog-intro">
         Rates are material allowances in USD, not market quotes. Map the exact
         material name from your model. Composite assemblies remain excluded.
@@ -162,44 +207,6 @@ export default function AssumptionsDialog({
         Changing assumptions reopens acknowledgements so past decisions cannot
         silently approve new results.
       </p>
-      <div className="dialog-actions">
-        <button
-          className="secondary-button"
-          onClick={() => setDraftPolicy(structuredClone(defaultPolicy))}
-        >
-          Reset example rates
-        </button>
-        <button
-          className="primary-button"
-          disabled={
-            !Number.isFinite(draftPolicy.minDoorWidth) ||
-            draftPolicy.minDoorWidth < 0.1 ||
-            draftPolicy.minDoorWidth > 10 ||
-            draftPolicy.rates.some(
-              (r) =>
-                !r.material.trim() ||
-                !r.source.trim() ||
-                !Number.isFinite(r.value) ||
-                r.value < 0 ||
-                r.value > 1e8,
-            ) ||
-            new Set(draftPolicy.rates.map((r) => r.material.trim())).size !==
-              draftPolicy.rates.length
-          }
-          onClick={() => {
-            onApply({
-              ...draftPolicy,
-              rates: draftPolicy.rates.map((r) => ({
-                ...r,
-                material: r.material.trim(),
-              })),
-            });
-          }}
-        >
-          Apply assumptions
-          <ArrowRight size={15} />
-        </button>
-      </div>
     </Dialog>
   );
 }

@@ -8,7 +8,7 @@ An incomplete model can still produce a convincing total. Trace keeps the missin
 
 ![Trace model review workspace](docs/trace-workspace.jpg)
 
-[Quick start](#run-locally) · [Walkthrough](#walkthrough) · [Engineering decisions](docs/PRODUCT_REVIEW.md) · [Verification](docs/VERIFICATION.md)
+[Quick start](#run-locally) · [Walkthrough](#walkthrough) · [Interface design](docs/DESIGN_SYSTEM.md) · [Engineering decisions](docs/PRODUCT_REVIEW.md) · [Verification](docs/VERIFICATION.md)
 
 ## Walkthrough
 
@@ -42,6 +42,12 @@ The example contains 135 elements, two excluded items, three findings and four r
 ![Workspace backup preview with both models, assumptions and note counts](docs/trace-backup.jpg)
 
 </details>
+
+## The review studio
+
+A white workspace, a dark summary band and lime controls keep the model in focus. Model review, quantities and revision impact share a compact top navigation. Source evidence sits beside the model; on phones it moves below it. Rate editing keeps its Apply action visible while the material list scrolls.
+
+The interface follows the supplied VEED style direction with locally hosted Inter and DM Serif Display. The [design system](docs/DESIGN_SYSTEM.md) records the palette, typography, interaction and responsive rules. Every image and walkthrough frame in this README comes from the running app.
 
 ## Run locally
 

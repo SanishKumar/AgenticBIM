@@ -1,4 +1,19 @@
-# Verification · 18 October 2026
+# Verification · 20 October 2026
+
+## Studio interface redesign
+
+- Rebuilt the shared styles and workspace shell around the supplied VEED reference: white canvas, carbon text, a dark summary strip, lime primary actions and selection states, rounded controls and local Inter / DM Serif Display fonts. The [design system](DESIGN_SYSTEM.md) records the decisions and typeface licenses.
+- **22 frontend tests passed**, along with lint and a production build. The business evaluator and backend rules retain their existing scope and test coverage.
+- Changed the concrete rate to 200 USD/m³ through the new rate dialog. The allowance changed from $123,782 to $128,108 and the known revision delta from $1,979 to $2,118. Restoring the example rates returned the original amounts.
+- Chose the bundled IFC through the new import dialog and submitted it to the local service. The completed workspace retained 135 elements, 133 priced elements and two exclusions, and cleared the previous baseline. Restoring the downloaded workspace backup recovered the baseline and four revision changes; it survived a reload.
+- Checked ledger pagination, search and opening a ledger row in the source inspector. Checked floor separation, X-ray and level controls. The door revision retained the hand-calculated $163.68 → $127.67 allowance and −$36.01 line impact across baseline, overlay and current modes.
+- Escape closed the rate dialog and returned keyboard focus to its Assumptions button. The dialog keeps its heading and Apply action visible while the material list scrolls. On phones, material fields expand across the row; collapsed finding columns retain impact/status text.
+- Checked all three workspaces at 320, 390, 768, 1024 and 1440 px: 15 page/breakpoint combinations. Document scroll width equalled client width in each. The ledger retains its own horizontal table scroll. Temporary viewport overrides were cleared afterward.
+- Checked the main text pairs: Smoke on Paper is 4.73:1, Slate on Mist is 7.46:1, and Forest Ink on Lime Spark is 11.20:1. This checks those color combinations, rather than certifying the whole application against an accessibility standard.
+- Replaced the README screenshots and seven-frame screen sequence with captures of the redesigned running app. No mock interface or generated imagery is included.
+- No browser console errors were observed in the final session. The example model, baseline and rates were restored after import testing, and the app was left on its model-review page.
+
+Earlier verification records follow; their dates, test counts and observations describe those earlier revisions.
 
 ## Workspace recovery and ledger follow-up
 

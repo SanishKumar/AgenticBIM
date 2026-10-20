@@ -40,6 +40,7 @@ Trace's product hypothesis is that a small, browser-based evidence handoff can b
 
 ## What was built
 
+- A white studio interface with top navigation, local Inter and DM Serif Display fonts, a dark summary strip, restrained lime actions, neutral source geometry and responsive evidence panels. The [design system](DESIGN_SYSTEM.md) documents the supplied VEED reference and its application to the review workflow.
 - Responsive review workspace with real Three.js geometry, orbit, zoom, selection, level filters, review coloring, X-ray, and animated exploded floors.
 - Source inspector with IFC entity/quantity paths, original values/units, conversion factors, and net/gross/declared basis.
 - Deterministic findings for pricing gaps, material ambiguity, source warnings, and a configurable project door-width target.

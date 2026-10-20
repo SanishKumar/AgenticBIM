@@ -8,21 +8,30 @@ export default function Dialog({
   children,
   wide = false,
   busy = false,
+  footer,
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
   wide?: boolean;
   busy?: boolean;
+  footer?: React.ReactNode;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    dialog.current?.showModal();
+    const element = dialog.current;
+    const previousFocus = document.activeElement;
+    element?.showModal();
+    return () => {
+      element?.close();
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected)
+        previousFocus.focus({ preventScroll: true });
+    };
   }, []);
   return (
     <dialog
       ref={dialog}
-      className={`dialog ${wide ? "dialog-wide" : ""}`}
+      className={`dialog ${wide ? "dialog-wide" : ""} ${footer ? "dialog-with-footer" : ""}`}
       onCancel={(event) => {
         if (busy) event.preventDefault();
         else onClose();
@@ -40,7 +49,14 @@ export default function Dialog({
           <X size={20} />
         </button>
       </div>
-      {children}
+      {footer ? (
+        <>
+          <div className="dialog-scroll">{children}</div>
+          <div className="dialog-fixed-footer">{footer}</div>
+        </>
+      ) : (
+        children
+      )}
     </dialog>
   );
 }

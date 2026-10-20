@@ -47,11 +47,11 @@ export default function ModelViewer(props: Props) {
       return;
     }
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color("#e9ede8");
+    scene.background = new THREE.Color("#f2f1f0");
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.setClearColor("#e9ede8");
+    renderer.setClearColor("#f2f1f0");
     container.appendChild(renderer.domElement);
     renderer.domElement.setAttribute(
       "aria-label",
@@ -85,14 +85,14 @@ export default function ModelViewer(props: Props) {
       const role = element.previewRole;
       const color =
         role === "baseline"
-          ? "#b57b45"
+          ? "#95969c"
           : role === "current"
-            ? "#85a94c"
+            ? "#96ff1a"
             : glass
-              ? "#7b9f9c"
+              ? "#8b8d93"
               : wood
-                ? "#aa8a62"
-                : "#e4e3d9";
+                ? "#aaa6a0"
+                : "#ecebe8";
       const opacity =
         role === "baseline"
           ? 0.25
@@ -131,10 +131,10 @@ export default function ModelViewer(props: Props) {
         new THREE.LineBasicMaterial({
           color:
             role === "baseline"
-              ? "#8f5526"
+              ? "#71737a"
               : role === "current"
-                ? "#3d6122"
-                : "#52635a",
+                ? "#083300"
+                : "#4d4d51",
           transparent: true,
           opacity: role ? 0.65 : glass ? 0.27 : 0.15,
         }),
@@ -155,9 +155,9 @@ export default function ModelViewer(props: Props) {
     controls.target.copy(target);
     controls.minDistance = span * 0.3;
     controls.maxDistance = span * 5;
-    const hemi = new THREE.HemisphereLight("#ffffff", "#8c9b8a", 1.9);
+    const hemi = new THREE.HemisphereLight("#ffffff", "#97979a", 1.9);
     scene.add(hemi);
-    const sun = new THREE.DirectionalLight("#fff5df", 2.1);
+    const sun = new THREE.DirectionalLight("#ffffff", 2.1);
     sun.position.set(span, span * 1.8, span * 0.8);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
@@ -170,16 +170,16 @@ export default function ModelViewer(props: Props) {
     scene.add(sun);
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(span * 15, span * 15),
-      new THREE.MeshStandardMaterial({ color: "#e9ede8", roughness: 1 }),
+      new THREE.MeshStandardMaterial({ color: "#f2f1f0", roughness: 1 }),
     );
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -0.09;
     ground.receiveShadow = true;
     scene.add(ground);
-    const grid = new THREE.GridHelper(span * 5, 60, "#b9c5b9", "#d0d9cf");
+    const grid = new THREE.GridHelper(span * 5, 60, "#c6c6c9", "#dededf");
     grid.position.y = -0.07;
     scene.add(grid);
-    scene.fog = new THREE.Fog("#e9ede8", span * 3.2, span * 6);
+    scene.fog = new THREE.Fog("#f2f1f0", span * 3.2, span * 6);
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
     let down = { x: 0, y: 0 };
@@ -333,14 +333,19 @@ export default function ModelViewer(props: Props) {
           mesh.userData.role === props.revisionMode);
       mesh.material.color.set(
         selected
-          ? "#c9ef6b"
+          ? "#96ff1a"
           : props.colorMode === "review" && flagged.has(mesh.userData.id)
-            ? "#d89252"
+            ? "#292a2e"
             : mesh.userData.color,
       );
-      mesh.material.emissive.set(selected ? "#263b05" : "#000000");
+      mesh.material.emissive.set(selected ? "#173000" : "#000000");
       mesh.material.opacity =
-        props.xray && !selected ? 0.18 : mesh.userData.opacity;
+        props.xray && !selected
+          ? 0.18
+          : props.revisionMode === "baseline" &&
+              mesh.userData.role === "baseline"
+            ? 0.9
+            : mesh.userData.opacity;
       mesh.material.transparent = mesh.material.opacity < 1;
       mesh.material.depthWrite = mesh.material.opacity >= 0.4;
       mesh.userData.targetY = props.exploded
@@ -375,8 +380,8 @@ export default function ModelViewer(props: Props) {
       <div className="north-marker" aria-label="Model positive Y direction">
         <span>+Y</span>
         <svg ref={compass} viewBox="0 0 40 40" aria-hidden="true">
-          <path d="M20 3L27 30L20 25L13 30Z" fill="#405149" />
-          <path d="M20 3L20 25L13 30Z" fill="#a0aca4" />
+          <path d="M20 3L27 30L20 25L13 30Z" fill="#323232" />
+          <path d="M20 3L20 25L13 30Z" fill="#a2a2a6" />
         </svg>
       </div>
       <div className="viewer-fallback">

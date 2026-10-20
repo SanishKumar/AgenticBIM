@@ -6,7 +6,6 @@ import {
   Check,
   CheckCheck,
   ChevronDown,
-  FileCheck2,
   Fingerprint,
   Focus,
   ShieldCheck,
@@ -184,15 +183,21 @@ export default function EvidenceInspector({
         </div>
       ) : (
         <div className="inspector-body brief">
-          <div className="brief-icon">
-            <FileCheck2 size={25} />
-            <span />
-          </div>
-          <span className="eyebrow">THE MODEL, AT A GLANCE</span>
+          <span className="eyebrow">BEFORE YOU PRICE IT</span>
           <h2>
-            A good model tells you
-            <br />
-            what it doesn’t know.
+            {review.excludedCount ? (
+              <>
+                {review.excludedCount}{" "}
+                {review.excludedCount === 1 ? "element." : "elements."}
+                <br />
+                Still unpriced.
+              </>
+            ) : (
+              <>
+                Every element.
+                <br />A clear price basis.
+              </>
+            )}
           </h2>
           <p>
             {review.excludedCount
@@ -214,10 +219,10 @@ export default function EvidenceInspector({
           <div className="brief-check">
             <ShieldCheck size={17} />
             <div>
-              <strong>Nothing filled in behind the scenes</strong>
+              <strong>Follow the amount to its source.</strong>
               <p>
-                Missing quantities stay missing. Every priced line keeps its IFC
-                source.
+                Original units, declared quantities and mapped rates stay
+                attached to every element.
               </p>
             </div>
           </div>
